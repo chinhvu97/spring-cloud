@@ -1,0 +1,80 @@
+version: '3.7'
+
+services:
+  currency-exchange:
+    image: spring-cloud-starter/mmv2-currency-exchange-service:0.0.1-SNAPSHOT
+    ports:
+      - "8000:8000"
+    networks:
+      - my-network
+    depends_on:
+      - naming-server
+      - rabbitmq
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_ZIPKIN_BASEURL: http://zipkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+  currency-conversion:
+    image: spring-cloud-starter/mmv2-currency-conversion-service:0.0.1-SNAPSHOT
+    ports:
+      - "8100:8100"
+    networks:
+      - my-network
+    depends_on:
+      - naming-server
+      - rabbitmq
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_ZIPKIN_BASEURL: http://zipkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+  naming-server:
+    image: spring-cloud-starter/mmv2-naming-server:0.0.1-SNAPSHOT
+    ports:
+      - "8761:8761"
+    networks:
+      - my-network
+    environment:
+      EUREKA.INSTANCE.HOSTNAME: naming-server
+      SPRING_ZIPKIN_BASEURL: http://zipkin-server:9411/
+
+  api-gateway:
+    image: spring-cloud-starter/mmv2-api-gateway:0.0.1-SNAPSHOT
+    ports:
+      - "8765:8765"
+    networks:
+      - my-network
+    depends_on:
+      - rabbitmq
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_ZIPKIN_BASEURL: http://zipkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+  zipkin-server:
+    image: openzipkin/zipkin:2.23
+    ports:
+      - "9411:9411"
+    networks:
+      - my-network
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+
+  rabbitmq:
+    image: rabbitmq:3.8.12-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - my-network
+networks:
+  my-network:
